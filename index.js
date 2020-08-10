@@ -1,4 +1,4 @@
-require('dotnev').config();
+require('dotenv').config();
 
 const util = require('util');
 const fs = require('fs');
@@ -20,12 +20,12 @@ let chatIds = [];
 const startBot = async () => {
     const bot = new TelegramBot(TOKEN, {polling: true});
 
-    bot.on(/\/start/, async (msg) => {
+    bot.onText(/\/start/, async (msg) => {
         const curentChatId = msg.chat.id;
 
         if (chatIds.indexOf(curentChatId) === -1) {
             try{
-                await writeFile(CHAT_IDS_FILE, curentChatId, {
+                await writeFile(CHAT_IDS_FILE, `${curentChatId}\n`, {
                     flag: 'a'
                 });
             }
@@ -62,7 +62,9 @@ const startApp = (bot) => new Promise((resolve) => {
                 return res.sendStatus(400); 
             }
 
-            await Promise.all(chatIds.map((chatId) => bot.sendMessage(chatId, message)));
+            await Promise.all(chatIds
+                .filter((chatId) => chatId !== '')
+                .map((chatId) => bot.sendMessage(chatId, message)));
 
             res.sendStatus(200);
         }
@@ -77,7 +79,7 @@ const startApp = (bot) => new Promise((resolve) => {
 
 const getChatIds = async () => {
     try {
-        chatIds = (await readFile(CHAT_IDS_FILE)).split('\n');
+        chatIds = (await readFile(CHAT_IDS_FILE)).toString().split('\n');
     }
     catch (err) {
         console.error(err);
