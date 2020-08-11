@@ -37,7 +37,7 @@ const startBot = async () => {
         }
 
         try {
-            await bot.sendMessage(curentChatId, 'Subscribed to notification');
+            await bot.sendMessage(curentChatId, 'Subscribed to notifications');
         }
         catch (err) {
             console.error(err);
@@ -74,7 +74,10 @@ const startApp = (bot) => new Promise((resolve) => {
         }
     });
 
-    app.listen(PORT, '0.0.0.0', resolve);
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Serve listening at ${PORT}`);
+        resolve();
+    });
 });
 
 const getChatIds = async () => {
