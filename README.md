@@ -9,5 +9,5 @@ Run `npm run start`
 Subscribe to the telegram bot as usual.
 Send notification like this way:
 
-`curl --request GET 'https://MY-ENDPOINT.COM/send-notification?message=simple_message_please' \
+`curl --request GET 'https://MY-ENDPOINT.COM/send-notification?message=simple_message_please&from=your_tg_name' \
     --header 'x-api-key: API_KEY'`

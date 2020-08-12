@@ -15,29 +15,56 @@ const {
     PORT
 } = process.env;
 
-let chatIds = [];
+let chatsMap = {};
+
+const getUserChats = (firstName) => {
+    const chatIds = [];
+
+    for (const id of Object.keys(chatsMap)) {
+        if (chatsMap[id].toLowerCase() === firstName.toLowerCase()) {
+            chatIds.push(id);
+        }
+    }
+
+    return chatIds;
+};
+
+const removeChat = async (chatId) => {
+    delete chatsMap[chatId];
+    await syncChatsMap();
+};
+
+const syncChatsMap = async () => {
+    try {
+        await writeFile(CHAT_IDS_FILE, JSON.stringify(chatsMap));
+    }
+    catch (err) {
+        console.error(err);
+    }
+};
+
+const handlesendMessageError = async (err, chatId) => {
+    console.error(`Error on chat ${chatId}, ${err.message}`);
+
+    if (/chat not found/.test(err.message)) {
+        await removeChat(chatId);
+    }
+}
 
 const startBot = async () => {
     const bot = new TelegramBot(TOKEN, {polling: true});
 
     bot.onText(/\/start/, async (msg) => {
         const curentChatId = msg.chat.id;
+        const firstName = msg.chat.first_name
 
-        if (chatIds.indexOf(curentChatId) === -1) {
-            try{
-                await writeFile(CHAT_IDS_FILE, `${curentChatId}\n`, {
-                    flag: 'a'
-                });
-            }
-            catch (err) {
-                console.error(err);
-            }
-
-            chatIds.push(curentChatId);
+        if (!chatsMap[curentChatId]) {
+            chatsMap[curentChatId] = firstName;
+            await syncChatsMap();
         }
 
         try {
-            await bot.sendMessage(curentChatId, 'Subscribed to notifications');
+            await bot.sendMessage(curentChatId, `Subscribed to notifications from ${firstName} `);
         }
         catch (err) {
             console.error(err);
@@ -56,15 +83,22 @@ const startApp = (bot) => new Promise((resolve) => {
                 return res.sendStatus(403);
             }
 
-            const message = req.query.message;
+            const {message, from} = req.query;
 
-            if (!message) {
-                return res.sendStatus(400); 
+            if (!message || !from) {
+                return res.sendStatus(400);
             }
 
-            await Promise.all(chatIds
-                .filter((chatId) => chatId !== '')
-                .map((chatId) => bot.sendMessage(chatId, message)));
+            const receiverChats = getUserChats(from);
+
+            if (!receiverChats.length) {
+                return res.sendStatus(404);
+            }
+
+            await Promise.all(receiverChats
+                .map((chatId) => bot
+                    .sendMessage(chatId, message)
+                    .catch((err) => handlesendMessageError(err, chatId))));
 
             res.sendStatus(200);
         }
@@ -75,21 +109,21 @@ const startApp = (bot) => new Promise((resolve) => {
     });
 
     app.listen(PORT, '0.0.0.0', () => {
-        console.log(`Serve listening at ${PORT}`);
+        console.log(`Server listening at ${PORT}`);
         resolve();
     });
 });
 
-const getChatIds = async () => {
+const getChatsMap = async () => {
     try {
-        chatIds = (await readFile(CHAT_IDS_FILE)).toString().split('\n');
+        chatsMap = JSON.parse(await readFile(CHAT_IDS_FILE).toString());
     }
     catch (err) {
         console.error(err);
     }
 };
 
-getChatIds()
+getChatsMap()
     .then(startBot)
     .then(startApp)
     .catch(err => console.error(err));
