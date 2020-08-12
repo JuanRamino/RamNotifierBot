@@ -43,7 +43,7 @@ const syncChatsMap = async () => {
     }
 };
 
-const handlesendMessageError = async (err, chatId) => {
+const handleSendMessageError = async (err, chatId) => {
     console.error(`Error on chat ${chatId}, ${err.message}`);
 
     if (/chat not found/.test(err.message)) {
@@ -98,7 +98,7 @@ const startApp = (bot) => new Promise((resolve) => {
             await Promise.all(receiverChats
                 .map((chatId) => bot
                     .sendMessage(chatId, message)
-                    .catch((err) => handlesendMessageError(err, chatId))));
+                    .catch((err) => handleSendMessageError(err, chatId))));
 
             res.sendStatus(200);
         }
