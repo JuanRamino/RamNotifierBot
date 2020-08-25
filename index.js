@@ -4,6 +4,7 @@ const util = require('util');
 const fs = require('fs');
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
+const nanoid = require('nanoid');
 
 const readFile = util.promisify(fs.readFile);
 const writeFile = util.promisify(fs.writeFile);
@@ -11,26 +12,26 @@ const writeFile = util.promisify(fs.writeFile);
 const {
     CHAT_IDS_FILE,
     TOKEN,
-    API_KEY,
-    PORT
+    PORT,
+    API_END_POINT
 } = process.env;
 
 let chatsMap = {};
 
-const getUserChats = (firstName) => {
-    const chatIds = [];
-
-    for (const id of Object.keys(chatsMap)) {
-        if (chatsMap[id].toLowerCase() === firstName.toLowerCase()) {
-            chatIds.push(id);
+const apiKeyRegistered = (chatId) => {
+    for (const apiKey of Object.keys(chatsMap)) {
+        if (chatsMap[apiKey] === chatId) {
+            return apiKey;
         }
     }
-
-    return chatIds;
 };
 
 const removeChat = async (chatId) => {
-    delete chatsMap[chatId];
+    for (const apiKey of Object.keys(chatsMap)) {
+        if (chatsMap[apiKey] === chatId) {
+            delete chatsMap[apiKey];
+        }
+    }
     await syncChatsMap();
 };
 
@@ -56,15 +57,21 @@ const startBot = async () => {
 
     bot.onText(/\/start/, async (msg) => {
         const curentChatId = msg.chat.id;
-        const firstName = msg.chat.first_name
-
-        if (!chatsMap[curentChatId]) {
-            chatsMap[curentChatId] = firstName;
-            await syncChatsMap();
+        let apiKey = nanoid();
+        const oldApiKey = apiKeyRegistered(curentChatId);
+        
+        if (oldApiKey) {
+            delete chatsMap[oldApiKey];
         }
 
+        chatsMap[apiKey] = curentChatId;
+        syncChatsMap();
+
         try {
-            await bot.sendMessage(curentChatId, `Subscribed to notifications from ${firstName} `);
+            await bot.sendMessage(curentChatId, `Your api key is ${apiToken}`);
+            await bot.sendMessage(curentChatId, `Try it:
+                curl --request GET 'https://${API_END_POINT}/send-notification?message=simple_message_please \
+                --header 'x-api-key: ${apiKey}'`);
         }
         catch (err) {
             console.error(err);
@@ -79,26 +86,21 @@ const startApp = (bot) => new Promise((resolve) => {
 
     app.get('/send-notification', async (req, res) => {
         try {
-            if (req.headers['x-api-key'] !== API_KEY) {
+            const chatId = chatsMap[req.headers['x-api-key']];
+
+            if (!chatId) {
                 return res.sendStatus(403);
             }
 
-            const {message, from} = req.query;
+            const {message} = req.query;
 
-            if (!message || !from) {
+            if (!message) {
                 return res.sendStatus(400);
             }
 
-            const receiverChats = getUserChats(from);
-
-            if (!receiverChats.length) {
-                return res.sendStatus(404);
-            }
-
-            await Promise.all(receiverChats
-                .map((chatId) => bot
-                    .sendMessage(chatId, message)
-                    .catch((err) => handleSendMessageError(err, chatId))));
+            await bot
+                .sendMessage(chatId, message)
+                .catch((err) => handleSendMessageError(err, receiverChat));
 
             res.sendStatus(200);
         }
