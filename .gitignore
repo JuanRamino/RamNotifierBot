@@ -1,4 +1,5 @@
 .env
 node_modules
-*.txt
+chats_map.json
 .idea
+.vscode

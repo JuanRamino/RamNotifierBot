@@ -4,19 +4,18 @@ const util = require('util');
 const fs = require('fs');
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
-const nanoid = require('nanoid');
+const {nanoid} = require('nanoid');
 
 const readFile = util.promisify(fs.readFile);
 const writeFile = util.promisify(fs.writeFile);
 
+let chatsMap = {};
+const CHATS_MAP_CACHE = './chats_map.json';
 const {
-    CHAT_IDS_FILE,
-    TOKEN,
+    TG_TOKEN,
     PORT,
     API_END_POINT
 } = process.env;
-
-let chatsMap = {};
 
 const apiKeyRegistered = (chatId) => {
     for (const apiKey of Object.keys(chatsMap)) {
@@ -32,12 +31,12 @@ const removeChat = async (chatId) => {
             delete chatsMap[apiKey];
         }
     }
-    await syncChatsMap();
+    await syncChatsMapCache();
 };
 
-const syncChatsMap = async () => {
+const syncChatsMapCache = async () => {
     try {
-        await writeFile(CHAT_IDS_FILE, JSON.stringify(chatsMap));
+        await writeFile(CHATS_MAP_CACHE, JSON.stringify(chatsMap));
     }
     catch (err) {
         console.error(err);
@@ -53,7 +52,7 @@ const handleSendMessageError = async (err, chatId) => {
 }
 
 const startBot = async () => {
-    const bot = new TelegramBot(TOKEN, {polling: true});
+    const bot = new TelegramBot(TG_TOKEN, {polling: true});
 
     bot.onText(/\/start/, async (msg) => {
         const curentChatId = msg.chat.id;
@@ -65,13 +64,13 @@ const startBot = async () => {
         }
 
         chatsMap[apiKey] = curentChatId;
-        syncChatsMap();
+        syncChatsMapCache();
 
         try {
-            await bot.sendMessage(curentChatId, `Your api key is ${apiToken}`);
-            await bot.sendMessage(curentChatId, `Try it:
-                curl --request GET 'https://${API_END_POINT}/send-notification?message=simple_message_please \
-                --header 'x-api-key: ${apiKey}'`);
+            await bot.sendMessage(curentChatId, 'Your api key is:');
+            await bot.sendMessage(curentChatId, `${apiKey}`);
+            await bot.sendMessage(curentChatId, 'Try it:');
+            await bot.sendMessage(curentChatId, `\`curl --request GET 'https://${API_END_POINT}/send-notification?message=simple_message_please' --header 'x-api-key: ${apiKey}'\``, {parse_mode : 'markdown'});
         }
         catch (err) {
             console.error(err);
@@ -118,7 +117,7 @@ const startApp = (bot) => new Promise((resolve) => {
 
 const getChatsMap = async () => {
     try {
-        chatsMap = JSON.parse(await readFile(CHAT_IDS_FILE).toString());
+        chatsMap = JSON.parse((await readFile(CHATS_MAP_CACHE)).toString());
     }
     catch (err) {
         console.error(err);
