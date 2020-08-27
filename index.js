@@ -49,6 +49,8 @@ const handleSendMessageError = async (err, chatId) => {
     if (/chat not found/.test(err.message)) {
         await removeChat(chatId);
     }
+
+    throw(err);
 }
 
 const startBot = async () => {
