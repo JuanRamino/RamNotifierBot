@@ -126,7 +126,8 @@ const getChatsMap = async () => {
     }
 };
 
-getChatsMap()
-    .then(startBot)
-    .then(startApp)
-    .catch(err => console.error(err));
+module.exports = {
+    getChatsMap,
+    startApp,
+    startBot
+};
