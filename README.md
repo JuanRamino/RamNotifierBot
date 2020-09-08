@@ -1,7 +1,7 @@
 # RamNotifierBot
 
 Is a simple Notification system based on express.js and a telegram bot.
-When a webhook is called, the bot send a notification to chat members.
+When a webhook is called, the bot sends a notification to chat members.
 
 ### Run
 
