@@ -54,7 +54,9 @@ const handleSendMessageError = async (err, chatId) => {
 }
 
 const startBot = async () => {
-    const bot = new TelegramBot(TG_TOKEN, {polling: true});
+    const bot = new TelegramBot(TG_TOKEN);
+    // This informs the Telegram servers of the new webhook.
+    bot.setWebHook(`${API_END_POINT}/bot${TG_TOKEN}`);
 
     bot.onText(/\/start/, async (msg) => {
         const curentChatId = msg.chat.id;
@@ -73,6 +75,16 @@ const startBot = async () => {
             await bot.sendMessage(curentChatId, `${apiKey}`);
             await bot.sendMessage(curentChatId, 'Try it:');
             await bot.sendMessage(curentChatId, `\`curl --request GET 'https://${API_END_POINT}/send-notification?message=simple_message_please' --header 'x-api-key: ${apiKey}'\``, {parse_mode : 'markdown'});
+        }
+        catch (err) {
+            console.error(err);
+        }
+    });
+
+    bot.onText(/\/help/, async (msg) => {
+        const curentChatId = msg.chat.id;
+        try {
+            await bot.sendMessage(curentChatId, 'Type /start to init');
         }
         catch (err) {
             console.error(err);
@@ -103,6 +115,18 @@ const startApp = (bot) => new Promise((resolve) => {
                 .sendMessage(chatId, message)
                 .catch((err) => handleSendMessageError(err, receiverChat));
 
+            res.sendStatus(200);
+        }
+        catch (err) {
+            console.error(err);
+            res.sendStatus(500);
+        }
+    });
+
+    // We are receiving updates at the route below!
+    app.post(`/bot${TG_TOKEN}`, (req, res) => {
+        try {
+            bot.processUpdate(req.body);
             res.sendStatus(200);
         }
         catch (err) {
