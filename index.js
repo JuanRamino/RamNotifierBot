@@ -56,7 +56,7 @@ const handleSendMessageError = async (err, chatId) => {
 const startBot = async () => {
     const bot = new TelegramBot(TG_TOKEN);
     // This informs the Telegram servers of the new webhook.
-    bot.setWebHook(`${API_END_POINT}/bot${TG_TOKEN}`);
+    bot.setWebHook(`${API_END_POINT}/bot${encodeURI(TG_TOKEN)}`);
 
     bot.onText(/\/start/, async (msg) => {
         const curentChatId = msg.chat.id;
@@ -124,7 +124,7 @@ const startApp = (bot) => new Promise((resolve) => {
     });
 
     // We are receiving updates at the route below!
-    app.post(`/bot${TG_TOKEN}`, (req, res) => {
+    app.post(`/bot${encodeURI(TG_TOKEN)}`, (req, res) => {
         try {
             bot.processUpdate(req.body);
             res.sendStatus(200);
