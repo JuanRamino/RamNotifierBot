@@ -56,7 +56,7 @@ const handleSendMessageError = async (err, chatId) => {
 const startBot = async () => {
     const bot = new TelegramBot(TG_TOKEN);
     // This informs the Telegram servers of the new webhook.
-    bot.setWebHook(`${API_END_POINT}/bot${encodeURI(TG_TOKEN)}`);
+    bot.setWebHook(`https://${API_END_POINT}/bot${encodeURI(TG_TOKEN)}`);
 
     bot.onText(/\/start/, async (msg) => {
         const curentChatId = msg.chat.id;
