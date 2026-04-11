@@ -96,6 +96,8 @@ const startBot = async () => {
 
 const startApp = (bot) => new Promise((resolve) => {
     const app = express();
+    
+    app.use(express.json());
 
     app.get('/send-notification', async (req, res) => {
         try {
